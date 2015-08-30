@@ -47,7 +47,7 @@ func TestInt(t *testing.T) {
 		{`"1""`, false, 0},
 	}
 	for _, c := range cases {
-		i := Int(1)
+		i := Int64(-1)
 		err := i.UnmarshalJSON([]byte(c.data))
 		if (err == nil) != c.ok || int(i) != c.val {
 			t.Error(c, i, err)

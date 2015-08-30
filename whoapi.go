@@ -15,7 +15,7 @@ import (
 
 // StatusError is an error received by WhoAPI in JSON response.
 type StatusError struct {
-	Code Int    `json:"status"`      // status code
+	Code Int64  `json:"status"`      // status code
 	Desc string `json:"status_desc"` // status description
 }
 
@@ -27,38 +27,38 @@ func (e StatusError) Error() string {
 // TODO: add all status code errors
 var (
 	// ErrTLDDoesNotExist is issued when WhoAPi doesn't recognise TLD.
-	// It can also happen when TLD is valid, but WhoApi doesn't know it,
-	// which might be similar to ErrWhoisNotYetSupported.
 	ErrTLDDoesNotExist = StatusError{4, "TLD does not exist"}
 
-	// ErrWhoisNotYetSupported is issued when whois server for input value is not yet supported.
-	// Note that for whois requests this can still contain structured whois data
-	// (see: https://whoapi.com/forum/thick-and-thin-whois-t37).
+	// ErrWhoisNotYetSupported is issued when whois server for input value is
+	// not yet supported. Note that for whois requests this can still contain
+	// a valid and meaningful whois response;
+	// see: https://whoapi.com/forum/thick-and-thin-whois-t37.
 	ErrWhoisNotYetSupported = StatusError{7, "whois server not yet supported"}
 
-	// ErrInvalidAPIAccount indicates invalid API key
+	// ErrInvalidAPIAccount indicates invalid API key.
 	ErrInvalidAPIAccount = StatusError{12, "invalid API account"}
 
 	// ErrTooManyRequests is issued when request rate was exceeded.
 	ErrTooManyRequests = StatusError{18, "too many requests"}
 )
 
-// Int is an integer which can be unmarshaled from both int or string JSON value.
-// This is needed as WhoAPI is inconsistent with types, returning, for example,
-// status code "0" (string) for OK, but 4 (int) for ErrTLDDoesNotExist.
-// If you ever want to parse raw JSON response data into a structure, you might
-// consider using this type instead of raw int.
-type Int int
+// Int64 is an integer which can be unmarshaled from both number or string
+// literal (representing a valid number). This is needed as WhoAPI is
+// inconsistent with types, for example sometimes returning "0" (string)
+// status code and sometimes 0 (number). If you ever want to parse raw JSON
+// response data into a structure, you might consider using this type
+// instead of raw int.
+type Int64 int64
 
 // UnmarshalJSON decodes Int from raw JSON value.
 // If data is a string it removes the quotes trying to decode the value as a raw integer.
-func (i *Int) UnmarshalJSON(data []byte) error {
+func (i *Int64) UnmarshalJSON(data []byte) error {
 	if len(data) >= 2 && data[0] == '"' && data[len(data)-1] == '"' {
 		data = data[1 : len(data)-1]
 	}
-	var n int
+	var n int64
 	err := json.Unmarshal(data, &n)
-	*i = Int(n)
+	*i = Int64(n)
 	return err
 }
 
