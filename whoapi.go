@@ -13,10 +13,10 @@ import (
 	"time"
 )
 
-// StatusError is an error received by WhoAPI in JSON response.
+// StatusError represents error extracted from WhoAPI status code.
 type StatusError struct {
-	Code Int64  `json:"status"`      // status code
-	Desc string `json:"status_desc"` // status description
+	Code int64  // error code
+	Desc string // error description
 }
 
 // Error returns a formatted error.
@@ -26,21 +26,46 @@ func (e StatusError) Error() string {
 
 // TODO: add all status code errors
 var (
-	// ErrTLDDoesNotExist is issued when WhoAPi doesn't recognise TLD.
 	ErrTLDDoesNotExist = StatusError{4, "TLD does not exist"}
 
-	// ErrWhoisNotYetSupported is issued when whois server for input value is
-	// not yet supported. Note that for whois requests this can still contain
-	// a valid and meaningful whois response;
-	// see: https://whoapi.com/forum/thick-and-thin-whois-t37.
+	// ErrWhoisNotYetSupported indicates WhoAPI doesn't support whois server
+	// containing whois datafor the domain. Note that for whois requests this
+	// can still contain a valid and meaningful whois response –
+	// see https://whoapi.com/forum/thick-and-thin-whois-t37.
 	ErrWhoisNotYetSupported = StatusError{7, "whois server not yet supported"}
 
 	// ErrInvalidAPIAccount indicates invalid API key.
 	ErrInvalidAPIAccount = StatusError{12, "invalid API account"}
 
-	// ErrTooManyRequests is issued when request rate was exceeded.
 	ErrTooManyRequests = StatusError{18, "too many requests"}
 )
+
+// Status contains status reponse returned by WhoAPI.
+type Status struct {
+	Code Int64  `json:"status"`      // status code
+	Desc string `json:"status_desc"` // status description
+}
+
+// Err returns error received in the status.
+// The returned error is nil if status was OK (code 0), otherwise error
+// type is StatusError. Predefined error values are returned when recognised.
+func (s *Status) Err() error {
+	// Try predefined errors
+	switch int64(s.Code) {
+	case 0:
+		return nil
+	case ErrTLDDoesNotExist.Code:
+		return ErrTLDDoesNotExist
+	case ErrWhoisNotYetSupported.Code:
+		return ErrWhoisNotYetSupported
+	case ErrInvalidAPIAccount.Code:
+		return ErrInvalidAPIAccount
+	case ErrTooManyRequests.Code:
+		return ErrTooManyRequests
+	}
+
+	return StatusError{int64(s.Code), s.Desc}
+}
 
 // Int64 is an integer which can be unmarshaled from both number or string
 // literal (representing a valid number). This is needed as WhoAPI is
@@ -84,27 +109,13 @@ func (c *Client) Get(req string, domain string) (data []byte, err error) {
 	}
 
 	// Process response status
-	var status StatusError
+	var status Status
 	err = json.Unmarshal(data, &status)
 	if err != nil {
 		return
 	}
 
-	// Convert status to known error or create a new one
-	switch status.Code {
-	case 0: // OK
-	case ErrTLDDoesNotExist.Code:
-		err = ErrTLDDoesNotExist
-	case ErrWhoisNotYetSupported.Code:
-		err = ErrWhoisNotYetSupported
-	case ErrInvalidAPIAccount.Code:
-		err = ErrInvalidAPIAccount
-	case ErrTooManyRequests.Code:
-		err = ErrTooManyRequests
-	default:
-		err = status
-	}
-
+	err = status.Err()
 	return
 }
 
